@@ -158,6 +158,7 @@ class _ToastWidgetState extends State<_ToastWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
+  bool _isDismissing = false; // 💡 중복 닫힘 방지 플래그
 
   @override
   void initState() {
@@ -166,6 +167,8 @@ class _ToastWidgetState extends State<_ToastWidget>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
+
+    // 💡 원래대로 상단에서 내려오도록 설정 (-100에서 20으로)
     _animation = Tween<double>(
       begin: -100.0,
       end: 20.0,
@@ -173,11 +176,20 @@ class _ToastWidgetState extends State<_ToastWidget>
 
     _controller.forward();
 
-    Future.delayed(const Duration(milliseconds: 2500), () async {
-      if (mounted) {
-        await _controller.reverse();
-        widget.onDismissed();
+    // 2.5초 뒤 자동 닫힘
+    Future.delayed(const Duration(milliseconds: 2500), () {
+      if (mounted && !_isDismissing) {
+        _dismiss();
       }
+    });
+  }
+
+  // 💡 즉시 닫기 함수 (위로 부드럽게 올라가며 사라짐)
+  void _dismiss() {
+    if (_isDismissing) return;
+    setState(() => _isDismissing = true);
+    _controller.reverse().then((_) {
+      if (mounted) widget.onDismissed();
     });
   }
 
@@ -193,40 +205,54 @@ class _ToastWidgetState extends State<_ToastWidget>
       animation: _animation,
       builder: (context, child) {
         return Positioned(
+          // 💡 상단 배치 유지 (안전 영역 고려)
           top: _animation.value + MediaQuery.of(context).padding.top,
           left: 24,
           right: 24,
-          child: Material(
-            elevation: 15,
-            borderRadius: BorderRadius.circular(100),
-            color: Colors.transparent,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                color: widget.color.withOpacity(0.95),
-                borderRadius: BorderRadius.circular(100),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.favorite_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      widget.message,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
+          child: GestureDetector(
+            // 💡 탭하거나 위로 스와이프하면 즉시 닫힘
+            onTap: _dismiss,
+            onVerticalDragEnd: (details) {
+              if (details.primaryVelocity! < 0) {
+                // 속도가 0보다 작으면 위로 스와이프한 것
+                _dismiss();
+              }
+            },
+            child: Material(
+              elevation: 15,
+              borderRadius: BorderRadius.circular(100),
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: widget.color.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.favorite_rounded,
+                      color: Colors.white,
+                      size: 20,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        widget.message,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1178,30 +1204,37 @@ class _MemoPageState extends State<MemoPage> {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
-                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+
+                    // 💡 1. 가져온 모든 폴더 문서 목록
+                    final allFolders = snapshot.data?.docs ?? [];
+
+                    // 💡 2. '임시 폴더'를 제외한 진짜 사용자의 폴더만 필터링
+                    final visibleFolders = allFolders
+                        .where((doc) => doc['name'] != '임시 폴더')
+                        .toList();
+
+                    // 💡 3. 필터링 후 남은 폴더가 없다면 안내 메시지 출력
+                    if (visibleFolders.isEmpty) {
                       return Center(
                         child: Text(
-                          '아직 폴더가 없어요!\n폴더 탭에서 먼저 만들어주세요.',
+                          '아직 폴더가 없어요!\n폴더 탭에서 먼저 만들어주세요. 📁',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: theme.textBody.withOpacity(0.6),
+                            fontSize: 15,
+                            height: 1.5,
                           ),
                         ),
                       );
                     }
 
-                    final folders = snapshot.data!.docs;
-
+                    // 💡 4. 사용자가 만든 폴더가 있다면 목록 렌더링
                     return ListView.builder(
                       physics: const BouncingScrollPhysics(),
-                      itemCount: folders.length,
+                      itemCount: visibleFolders.length,
                       itemBuilder: (context, index) {
-                        final doc = folders[index];
+                        final doc = visibleFolders[index];
                         final Color folderColor = Color(doc['colorValue']);
-
-                        // 💡 저장할 때는 '임시 폴더' 폴더는 숨김 처리
-                        if (doc['name'] == '임시 폴더')
-                          return const SizedBox.shrink();
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -3997,13 +4030,74 @@ class _EventBottomSheetState extends State<_EventBottomSheet> {
   }
 
   Future<void> _deleteEvent() async {
-    if (widget.eventDoc != null) {
-      await widget.eventDoc!.reference.delete();
-      if (mounted) {
-        Navigator.pop(context);
-        CustomToast.show(context, '일정이 삭제되었습니다. 🗑️', Colors.redAccent);
-      }
-    }
+    if (widget.eventDoc == null) return;
+
+    // 💡 1. 실수 방지용 삭제 확인 팝업 띄우기
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: widget.theme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          '일정 삭제',
+          style: TextStyle(
+            color: widget.theme.textHeader,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          '이 일정을 삭제할까요?',
+          style: TextStyle(color: widget.theme.textBody),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('취소', style: TextStyle(color: widget.theme.textBody)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () async {
+              Navigator.pop(ctx); // 다이얼로그 닫기
+
+              try {
+                final user = FirebaseAuth.instance.currentUser;
+                if (user != null) {
+                  // 💡 2. reference.delete() 대신 정확한 경로를 지정하여 확실하게 타격(삭제)
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(user.uid)
+                      .collection('events')
+                      .doc(widget.eventDoc!.id)
+                      .delete();
+                }
+
+                if (mounted) {
+                  Navigator.pop(context); // 일정 바텀 시트 닫기
+                  CustomToast.show(
+                    context,
+                    '일정이 깔끔하게 삭제되었습니다. 🗑️',
+                    Colors.orange,
+                  );
+                }
+              } catch (e) {
+                CustomToast.show(
+                  context,
+                  '삭제 중 서버 오류가 발생했습니다.',
+                  Colors.redAccent,
+                );
+              }
+            },
+            child: const Text(
+              '삭제',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -5223,6 +5317,70 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  void _showAppVersionDialog(BuildContext context, AppThemeColor theme) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        contentPadding: const EdgeInsets.all(32),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.auto_awesome_rounded, color: theme.primary, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              'Aura',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: theme.textHeader,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '버전 v0.0.2',
+              style: TextStyle(
+                fontSize: 16,
+                color: theme.textBody.withOpacity(0.8),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: theme.primaryLight.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                '최신 버전을 사용 중입니다 ✨',
+                style: TextStyle(
+                  color: theme.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Center(
+            child: TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                '확인',
+                style: TextStyle(
+                  color: theme.textBody,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -5479,7 +5637,13 @@ class ProfilePage extends StatelessWidget {
                             Icons.notifications_rounded,
                             '알림 설정',
                             theme.accent1,
-                            () {},
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const NotificationSettingsPage(),
+                              ),
+                            ),
                           ),
                           _buildMenuRow(
                             theme,
@@ -5493,7 +5657,12 @@ class ProfilePage extends StatelessWidget {
                             Icons.cloud_sync_rounded,
                             '데이터 백업 / 복원',
                             theme.accent2,
-                            () {},
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const BackupRestorePage(),
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 24),
                           Divider(
@@ -5507,11 +5676,18 @@ class ProfilePage extends StatelessWidget {
                             theme,
                             Icons.help_outline_rounded,
                             '도움말 및 문의',
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const HelpSupportPage(),
+                              ),
+                            ),
                           ),
                           _buildInfoRow(
                             theme,
                             Icons.info_outline_rounded,
-                            '앱 버전 정보 (v0.0.1)',
+                            '앱 버전 정보 (v0.0.2)',
+                            onTap: () => _showAppVersionDialog(context, theme),
                           ),
                         ],
                       ),
@@ -5593,41 +5769,56 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(AppThemeColor theme, IconData icon, String title) {
+  Widget _buildInfoRow(
+    AppThemeColor theme,
+    IconData icon,
+    String title, {
+    required VoidCallback onTap,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.surface.withOpacity(0.8),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: theme.primaryLight.withOpacity(0.15)),
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: theme.primaryLight.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: theme.primaryLight.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: theme.textBody, size: 20),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: theme.textBody,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: theme.textBody.withOpacity(0.4),
+                  size: 20,
+                ),
+              ],
             ),
-            child: Icon(icon, color: theme.textBody, size: 20),
           ),
-          const SizedBox(width: 16),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: theme.textBody,
-            ),
-          ),
-          const Spacer(),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: theme.textBody.withOpacity(0.4),
-            size: 20,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -6289,34 +6480,87 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
 
                   try {
                     User? user = FirebaseAuth.instance.currentUser;
+
+                    // 1. 비밀번호 재인증
                     await FirebaseAuth.instance
                         .signInWithEmailAndPassword(
                           email: user!.email!,
                           password: _passwordController.text,
                         )
                         .timeout(const Duration(seconds: 10));
-                    await FirebaseFirestore.instance
+
+                    // --- 💡 데이터 영구 삭제 로직 추가 ---
+                    final db = FirebaseFirestore.instance;
+                    final uid = user.uid;
+
+                    // 유저의 모든 하위 컬렉션 데이터 가져오기
+                    final memos = await db
                         .collection('users')
-                        .doc(user.uid)
-                        .delete()
-                        .timeout(const Duration(seconds: 10));
+                        .doc(uid)
+                        .collection('memos')
+                        .get();
+                    final folders = await db
+                        .collection('users')
+                        .doc(uid)
+                        .collection('folders')
+                        .get();
+                    final events = await db
+                        .collection('users')
+                        .doc(uid)
+                        .collection('events')
+                        .get();
+
+                    // Firestore는 한 번에 최대 500개까지만 일괄 처리(Batch)가 가능합니다.
+                    WriteBatch batch = db.batch();
+                    int batchCount = 0;
+
+                    // 모든 문서를 하나의 리스트로 합치기
+                    final allDocs = [
+                      ...memos.docs,
+                      ...folders.docs,
+                      ...events.docs,
+                    ];
+
+                    for (var doc in allDocs) {
+                      batch.delete(doc.reference);
+                      batchCount++;
+
+                      // 500개가 차면 먼저 전송하고 새로운 Batch 시작
+                      if (batchCount == 500) {
+                        await batch.commit();
+                        batch = db.batch();
+                        batchCount = 0;
+                      }
+                    }
+
+                    // 남은 데이터 마저 전송
+                    if (batchCount > 0) {
+                      await batch.commit();
+                    }
+                    // ---------------------------------
+
+                    // 2. 유저 부모 문서 삭제
+                    await db.collection('users').doc(uid).delete();
 
                     if (mounted) {
                       Navigator.pop(context);
                       Navigator.pop(context);
                       CustomToast.show(
                         context,
-                        '안전하게 탈퇴 처리되었습니다. 😭',
+                        '안전하게 탈퇴 처리되었으며, 모든 데이터가 파기되었습니다. 😭',
                         Colors.redAccent,
                       );
                     }
+
+                    // 3. Auth(인증) 계정 영구 삭제
                     await user.delete();
                   } on FirebaseAuthException catch (e) {
                     if (e.code == 'wrong-password' ||
-                        e.code == 'invalid-credential')
+                        e.code == 'invalid-credential') {
                       setState(() => _errorMessage = '비밀번호가 일치하지 않습니다.');
-                    else
+                    } else {
                       setState(() => _errorMessage = '오류 발생: ${e.code}');
+                    }
                   } catch (e) {
                     setState(() => _errorMessage = '서버 통신 중 오류가 발생했습니다.');
                   } finally {
@@ -6347,6 +6591,584 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
                 ),
         ),
       ],
+    );
+  }
+}
+
+// --- 🔔 알림 설정 페이지 ---
+class NotificationSettingsPage extends StatefulWidget {
+  const NotificationSettingsPage({super.key});
+
+  @override
+  State<NotificationSettingsPage> createState() =>
+      _NotificationSettingsPageState();
+}
+
+class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
+  bool _pushEnabled = true;
+  bool _eventAlertEnabled = true;
+  bool _marketingEnabled = false;
+
+  Widget _buildSwitchTile(
+    AppThemeColor theme,
+    String title,
+    String subtitle,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: theme.primaryLight.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: theme.name.contains('다크')
+                ? Colors.black.withOpacity(0.2)
+                : theme.primaryLight.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textHeader,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.textBody.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          CupertinoSwitch(
+            value: value,
+            activeColor: theme.primary,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<AppThemeColor>(
+      valueListenable: appThemeNotifier,
+      builder: (context, theme, child) {
+        return Scaffold(
+          backgroundColor: theme.bg,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: theme.textHeader,
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(
+              '알림 설정',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: theme.textHeader,
+              ),
+            ),
+            centerTitle: true,
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '어떤 소식을 받을지 선택해주세요 📮',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textHeader,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _buildSwitchTile(
+                  theme,
+                  '앱 푸시 알림',
+                  'Aura의 기본적인 알림을 받습니다.',
+                  _pushEnabled,
+                  (v) => setState(() => _pushEnabled = v),
+                ),
+                _buildSwitchTile(
+                  theme,
+                  '일정 리마인더',
+                  '캘린더에 등록한 일정 알림을 받습니다.',
+                  _eventAlertEnabled,
+                  (v) => setState(() => _eventAlertEnabled = v),
+                ),
+                _buildSwitchTile(
+                  theme,
+                  '마케팅 정보 수신',
+                  '새로운 기능과 이벤트 소식을 받습니다.',
+                  _marketingEnabled,
+                  (v) {
+                    setState(() => _marketingEnabled = v);
+                    if (v)
+                      CustomToast.show(
+                        context,
+                        '마케팅 정보 수신에 동의하셨습니다. 🎉',
+                        theme.primary,
+                      );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// --- ☁️ 데이터 백업/복원 페이지 ---
+class BackupRestorePage extends StatefulWidget {
+  const BackupRestorePage({super.key});
+
+  @override
+  State<BackupRestorePage> createState() => _BackupRestorePageState();
+}
+
+class _BackupRestorePageState extends State<BackupRestorePage> {
+  bool _isProcessing = false;
+  String _lastBackupDate = '2026.03.24 10:42';
+
+  Future<void> _handleBackup(AppThemeColor theme) async {
+    setState(() => _isProcessing = true);
+    // 실제 백업 로직 시뮬레이션
+    await Future.delayed(const Duration(seconds: 2));
+    setState(() {
+      _isProcessing = false;
+      _lastBackupDate =
+          '${DateTime.now().year}.${DateTime.now().month.toString().padLeft(2, '0')}.${DateTime.now().day.toString().padLeft(2, '0')} ${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
+    });
+    if (mounted)
+      CustomToast.show(context, '데이터가 안전하게 클라우드에 백업되었습니다! ☁️', theme.primary);
+  }
+
+  Future<void> _handleRestore(AppThemeColor theme) async {
+    setState(() => _isProcessing = true);
+    // 실제 복원 로직 시뮬레이션
+    await Future.delayed(const Duration(seconds: 2));
+    setState(() => _isProcessing = false);
+    if (mounted)
+      CustomToast.show(context, '마지막 백업 데이터로 복원이 완료되었습니다. ✨', theme.accent1);
+  }
+
+  Widget _buildActionCard(
+    AppThemeColor theme,
+    String title,
+    String desc,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: color.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          onTap: _isProcessing ? null : onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 32),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: theme.textHeader,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        desc,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: theme.textBody.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<AppThemeColor>(
+      valueListenable: appThemeNotifier,
+      builder: (context, theme, child) {
+        return Scaffold(
+          backgroundColor: theme.bg,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: theme.textHeader,
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(
+              '데이터 백업 / 복원',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: theme.textHeader,
+              ),
+            ),
+            centerTitle: true,
+          ),
+          body: _isProcessing
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(color: theme.primary),
+                      const SizedBox(height: 16),
+                      Text(
+                        '클라우드 서버와 통신 중입니다...',
+                        style: TextStyle(
+                          color: theme.textHeader,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.primaryLight.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline_rounded,
+                              color: theme.primary,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '마지막 백업: $_lastBackupDate',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: theme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      _buildActionCard(
+                        theme,
+                        '지금 데이터 백업하기',
+                        '현재 기기의 모든 메모, 폴더, 일정을 안전하게 클라우드에 저장합니다.',
+                        Icons.cloud_upload_rounded,
+                        theme.primary,
+                        () => _handleBackup(theme),
+                      ),
+                      _buildActionCard(
+                        theme,
+                        '백업 데이터 복원하기',
+                        '클라우드에 저장된 마지막 데이터를 현재 기기로 불러옵니다.',
+                        Icons.cloud_download_rounded,
+                        theme.accent1,
+                        () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              backgroundColor: theme.surface,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              title: Text(
+                                '데이터 복원',
+                                style: TextStyle(
+                                  color: theme.textHeader,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              content: Text(
+                                '현재 기기의 데이터가 백업된 데이터로 덮어씌워집니다. 계속할까요?',
+                                style: TextStyle(color: theme.textBody),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: Text(
+                                    '취소',
+                                    style: TextStyle(color: theme.textBody),
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: theme.primary,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    _handleRestore(theme);
+                                  },
+                                  child: const Text(
+                                    '복원하기',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+        );
+      },
+    );
+  }
+}
+
+// --- 🎧 도움말 및 문의 페이지 ---
+class HelpSupportPage extends StatelessWidget {
+  const HelpSupportPage({super.key});
+
+  Widget _buildFaqItem(AppThemeColor theme, String question, String answer) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.primaryLight.withOpacity(0.2)),
+      ),
+      child: Theme(
+        data: ThemeData(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          iconColor: theme.primary,
+          collapsedIconColor: theme.textBody.withOpacity(0.5),
+          title: Text(
+            question,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: theme.textHeader,
+              fontSize: 15,
+            ),
+          ),
+          childrenPadding: const EdgeInsets.only(
+            left: 16,
+            right: 16,
+            bottom: 16,
+          ),
+          children: [
+            Text(
+              answer,
+              style: TextStyle(
+                color: theme.textBody,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<AppThemeColor>(
+      valueListenable: appThemeNotifier,
+      builder: (context, theme, child) {
+        return Scaffold(
+          backgroundColor: theme.bg,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: theme.textHeader,
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(
+              '도움말 및 문의',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: theme.textHeader,
+              ),
+            ),
+            centerTitle: true,
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '자주 묻는 질문 🤔',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textHeader,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildFaqItem(
+                  theme,
+                  '메모 폴더는 어떻게 삭제하나요?',
+                  '폴더 목록에서 지우고 싶은 폴더를 길게 꾹 누르시면 메뉴 창이 나타납니다. 거기서 삭제를 선택할 수 있어요.',
+                ),
+                _buildFaqItem(
+                  theme,
+                  '임시 폴더는 무엇인가요?',
+                  '폴더를 삭제했을 때 그 안의 메모들이 안전하게 이동되는 기본 폴더입니다. 메모가 비어있을 때만 지울 수 있습니다.',
+                ),
+                _buildFaqItem(
+                  theme,
+                  '비밀번호를 잊어버렸어요.',
+                  '로그인 화면 하단의 [비밀번호 찾기]를 통해 가입하신 이메일로 비밀번호 재설정 링크를 받으실 수 있습니다.',
+                ),
+                _buildFaqItem(
+                  theme,
+                  '데이터는 안전하게 보관되나요?',
+                  '네, 작성하신 모든 데이터는 Google Firebase의 강력한 보안 시스템을 통해 암호화되어 안전하게 보관됩니다.',
+                ),
+                const SizedBox(height: 32),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: theme.primaryLight.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.support_agent_rounded,
+                        size: 48,
+                        color: theme.primary,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '더 도움이 필요하신가요?',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: theme.textHeader,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '언제든 편하게 문의를 남겨주세요.',
+                        style: TextStyle(
+                          color: theme.textBody.withOpacity(0.8),
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () {
+                          // 💡 이메일 주소 업데이트 완료
+                          CustomToast.show(
+                            context,
+                            '아래 이메일로 문의를 남겨주세요!\nll.team.aura.ll@gmail.com',
+                            theme.primary,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primary,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          '1:1 문의하기',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
