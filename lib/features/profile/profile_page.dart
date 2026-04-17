@@ -52,7 +52,7 @@ class ProfilePage extends StatelessWidget {
                   final isSelected = currentTheme.name == t.name;
                   return GestureDetector(
                     onTap: () {
-                      appThemeNotifier.value = t;
+                      saveSelectedTheme(t);
                       Navigator.pop(context);
                     },
                     child: Container(
@@ -309,62 +309,66 @@ class ProfilePage extends StatelessWidget {
     return ValueListenableBuilder<AppThemeColor>(
       valueListenable: appThemeNotifier,
       builder: (context, theme, child) {
-        return SafeArea(
-          child: Stack(
-            children: [
-              Positioned(
-                top: -50,
-                right: -50,
-                child: GlowBackground(color: theme.primary, size: 320),
+        return Stack(
+          children: [
+            Positioned(
+              top: -50,
+              right: -50,
+              child: GlowBackground(color: theme.primary, size: 320),
+            ),
+            Positioned(
+              bottom: 50,
+              left: -50,
+              child: GlowBackground(color: theme.accent1, size: 250),
+            ),
+            SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.only(
+                left: 20.w,
+                right: 20.w,
+                bottom: 8.h,
+                top: MediaQuery.of(context).padding.top + 4.h,
               ),
-              Positioned(
-                bottom: 50,
-                left: -50,
-                child: GlowBackground(color: theme.accent1, size: 250),
-              ),
-              SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
-                child: Column(
+              child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(height: 8.h),
+                    SizedBox(height: 4.h),
                     Row(
                       children: [
                         Icon(
                           Icons.favorite_rounded,
                           color: theme.accent1,
-                          size: 24,
+                          size: 20,
                         ),
                         SizedBox(width: 8.w),
                         Text(
                           'My Space',
                           style: TextStyle(
-                            fontSize: 14.sp,
+                            fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
                             color: theme.textBody.withOpacity(0.6),
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 4.h),
+                    SizedBox(height: 2.h),
                     Text(
                       '마이페이지',
                       style: TextStyle(
-                        fontSize: 36.sp,
+                        fontSize: 28.sp,
                         fontWeight: FontWeight.bold,
                         color: theme.textHeader,
-                        height: 1.2,
+                        height: 1.1,
                       ),
                     ),
                     Text(
                       '나만의 설정과 정보를 관리하세요',
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 13.sp,
                         color: theme.textBody.withOpacity(0.6),
                       ),
                     ),
-                    SizedBox(height: 32.h),
+                    SizedBox(height: 8.h),
 
                     StreamBuilder<DocumentSnapshot>(
                       stream: FirebaseFirestore.instance
@@ -611,15 +615,14 @@ class ProfilePage extends StatelessWidget {
                           ),
                         ],
                       ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            );
+          },
         );
-      },
-    );
-  }
+      }
 
   Widget _buildMenuRow(
     AppThemeColor theme,

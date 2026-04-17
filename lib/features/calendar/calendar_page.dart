@@ -300,21 +300,31 @@ class _CalendarPageState extends State<CalendarPage> {
     return ValueListenableBuilder<AppThemeColor>(
       valueListenable: appThemeNotifier,
       builder: (context, theme, child) {
-        return SafeArea(
-          child: Stack(
-            children: [
-              Positioned(
+        return Stack(
+          children: [
+            RepaintBoundary(
+              child: Positioned(
                 top: -50,
                 left: -50,
                 child: GlowBackground(color: theme.accent1, size: 300),
               ),
-              Positioned(
+            ),
+            RepaintBoundary(
+              child: Positioned(
                 bottom: -50,
                 right: -50,
                 child: GlowBackground(color: theme.primaryLight, size: 400),
               ),
+            ),
 
-              StreamBuilder<QuerySnapshot>(
+            Padding(
+              padding: EdgeInsets.only(
+                left: 20.w,
+                right: 20.w,
+                bottom: 8.h,
+                top: MediaQuery.of(context).padding.top + 4.h,
+              ),
+              child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('users')
                     .doc(user?.uid)
@@ -326,326 +336,287 @@ class _CalendarPageState extends State<CalendarPage> {
                       : [];
                   Map<String, int> eventTracks = _assignTracks(allEvents);
 
-                  return SingleChildScrollView(
-                    physics: NeverScrollableScrollPhysics(),
-                    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: 8.h),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_month_rounded,
-                              color: theme.accent1,
-                              size: 24,
-                            ),
-                            SizedBox(width: 8.w),
-                            Text(
-                              'Time Flow',
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: theme.textBody.withOpacity(0.6),
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          '이달의 기록',
-                          style: TextStyle(
-                            fontSize: 36.sp,
-                            fontWeight: FontWeight.bold,
-                            color: theme.textHeader,
-                            height: 1.2,
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: 4.h),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_month_rounded,
+                            color: theme.accent1,
+                            size: 20,
                           ),
-                        ),
-                        Text(
-                          '날짜를 선택해 그날의 이야기를 확인하세요',
-                          style: TextStyle(
-                            fontSize: 15.sp,
-                            color: theme.textBody.withOpacity(0.6),
-                          ),
-                        ),
-                        SizedBox(height: 16.h),
-
-                        Container(
-                          decoration: BoxDecoration(
-                            color: theme.surface.withOpacity(0.95),
-                            borderRadius: BorderRadius.circular(32.r),
-                            boxShadow: [
-                              BoxShadow(
-                                color: theme.name.contains('다크')
-                                    ? Colors.black.withOpacity(0.4)
-                                    : theme.primaryLight.withOpacity(0.2),
-                                blurRadius: 60,
-                                offset: Offset(0, 20),
-                              ),
-                            ],
-                            border: Border.all(
-                              color: theme.primaryLight.withOpacity(0.3),
+                          SizedBox(width: 8.w),
+                          Text(
+                            'Time Flow',
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w600,
+                              color: theme.textBody.withOpacity(0.6),
                             ),
                           ),
-                          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
-                          child: Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  GestureDetector(
-                                    onTap: () => setState(
-                                      () => _isPickerExpanded =
-                                          !_isPickerExpanded,
-                                    ),
-                                    child: Container(
-                                      color: Colors.transparent,
-                                      child: Row(
-                                        children: [
-                                          Text(
-                                            '${_focusedDay.year}년 ${_focusedDay.month}월',
-                                            style: TextStyle(
-                                              fontSize: 22.sp,
-                                              fontWeight: FontWeight.bold,
-                                              color: theme.textHeader,
-                                            ),
-                                          ),
-                                          Icon(
-                                            _isPickerExpanded
-                                                ? Icons.arrow_drop_up_rounded
-                                                : Icons.arrow_drop_down_rounded,
-                                            color: theme.textHeader,
-                                            size: 32,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        onPressed: _previousMonth,
-                                        icon: Icon(
-                                          Icons.chevron_left_rounded,
-                                          size: 28,
-                                        ),
-                                        color: theme.primaryLight,
-                                      ),
-                                      IconButton(
-                                        onPressed: _nextMonth,
-                                        icon: Icon(
-                                          Icons.chevron_right_rounded,
-                                          size: 28,
-                                        ),
-                                        color: theme.primaryLight,
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                        ],
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        '이달의 기록',
+                        style: TextStyle(
+                          fontSize: 28.sp,
+                          fontWeight: FontWeight.bold,
+                          color: theme.textHeader,
+                          height: 1.1,
+                        ),
+                      ),
+                      Text(
+                        '날짜를 선택해 그날의 이야기를 확인하세요',
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          color: theme.textBody.withOpacity(0.6),
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+
+                      Expanded(
+                        child: RepaintBoundary(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: theme.surface.withOpacity(0.95),
+                              borderRadius: BorderRadius.circular(32.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: theme.name.contains('다크')
+                                      ? Colors.black.withOpacity(0.4)
+                                      : theme.primaryLight.withOpacity(0.2),
+                                  blurRadius: 25,
+                                  offset: Offset(0, 12),
+                                ),
+                              ],
+                              border: Border.all(
+                                color: theme.primaryLight.withOpacity(0.3),
                               ),
-                              SizedBox(height: 8.h),
-                              if (_isPickerExpanded)
-                                SizedBox(
-                                  height: 150,
-                                  child: CupertinoTheme(
-                                    data: CupertinoThemeData(
-                                      textTheme: CupertinoTextThemeData(
-                                        dateTimePickerTextStyle: TextStyle(
-                                          color: theme.textHeader,
-                                          fontSize: 18.sp,
-                                        ),
+                            ),
+                            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () => setState(
+                                        () => _isPickerExpanded = !_isPickerExpanded,
                                       ),
-                                    ),
-                                    child: CupertinoDatePicker(
-                                      mode: CupertinoDatePickerMode.monthYear,
-                                      initialDateTime: _focusedDay,
-                                      minimumYear: 1900,
-                                      maximumYear: 2080,
-                                      onDateTimeChanged: (newDate) => setState(
-                                        () => _focusedDay = DateTime(
-                                          newDate.year,
-                                          newDate.month,
-                                          1,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              else
-                                  TableCalendar(
-                                    firstDay: DateTime.utc(1900, 1, 1),
-                                    lastDay: DateTime.utc(2080, 12, 31),
-                                    focusedDay: _focusedDay,
-                                    rowHeight: 88.h,
-                                  selectedDayPredicate: (day) =>
-                                      isSameDay(_selectedDay, day),
-                                  onDaySelected: (selectedDay, focusedDay) {
-                                    setState(() {
-                                      _selectedDay = selectedDay;
-                                      _focusedDay = focusedDay;
-                                    });
-                                    _showUnifiedDaySheet(theme, selectedDay, allEvents);
-                                  },
-                                  onPageChanged: (focusedDay) =>
-                                      setState(() => _focusedDay = focusedDay),
-                                  headerVisible: false,
-                                  eventLoader: (day) {
-                                    return allEvents.where((doc) {
-                                      if (doc.data() is Map<String, dynamic> &&
-                                          (doc.data() as Map<String, dynamic>)
-                                              .containsKey('startTime') &&
-                                          (doc.data() as Map<String, dynamic>)
-                                              .containsKey('endTime')) {
-                                        DateTime start =
-                                            (doc['startTime'] as Timestamp)
-                                                .toDate();
-                                        DateTime end =
-                                            (doc['endTime'] as Timestamp)
-                                                .toDate();
-                                        return _isDayInRange(day, start, end);
-                                      }
-                                      return false;
-                                    }).toList();
-                                  },
-                                  calendarBuilders: CalendarBuilders(
-                                    defaultBuilder: (context, day, focusedDay) {
-                                      Color textColor = (day.weekday == DateTime.sunday || day.weekday == DateTime.saturday) ? theme.accent2 : theme.textHeader;
-                                      return Align(alignment: Alignment.topCenter, child: Padding(padding: EdgeInsets.only(top: 4.h), child: Text('${day.day}', style: TextStyle(color: textColor))));
-                                    },
-                                    outsideBuilder: (context, day, focusedDay) => Align(alignment: Alignment.topCenter, child: Padding(padding: EdgeInsets.only(top: 4.h), child: Text('${day.day}', style: TextStyle(color: theme.textBody.withOpacity(0.5))))),
-                                    todayBuilder: (context, day, focusedDay) => Align(alignment: Alignment.topCenter, child: Container(margin: EdgeInsets.only(top: 4.h), width: 24, height: 24, decoration: BoxDecoration(color: theme.accent1.withOpacity(0.5), shape: BoxShape.circle), child: Center(child: Text('${day.day}', style: TextStyle(color: theme.textHeader, fontWeight: FontWeight.bold))))),
-                                    selectedBuilder: (context, day, focusedDay) => Align(alignment: Alignment.topCenter, child: Container(margin: EdgeInsets.only(top: 4.h), width: 24, height: 24, decoration: BoxDecoration(gradient: LinearGradient(colors: [theme.primary, theme.primaryLight]), shape: BoxShape.circle), child: Center(child: Text('${day.day}', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))))),
-                                    markerBuilder: (context, day, events) {
-                                      if (events.isEmpty) return SizedBox();
-
-                                      final baseColors = [
-                                        theme.primary,
-                                        theme.accent1,
-                                        theme.accent2,
-                                        Colors.pinkAccent,
-                                        Colors.orangeAccent,
-                                        Colors.green,
-                                        Colors.indigoAccent,
-                                      ];
-
-                                      final filteredEvents = events.cast<QueryDocumentSnapshot>().where((doc) {
-                                        return (eventTracks[doc.id] ?? 99) < 3;
-                                      }).toList();
-
-                                      return Positioned(
-                                        top: 0,
-                                        bottom: 0,
-                                        left: 0,
-                                        right: 0,
-                                        child: Stack(
-                                          clipBehavior: Clip.none,
-                                          children: filteredEvents.map((doc) {
-                                            final data = doc.data() as Map<String, dynamic>;
-                                            final title = data['title'] ?? '';
-                                            final start = (data['startTime'] as Timestamp).toDate();
-                                            final end = (data['endTime'] as Timestamp).toDate();
-
-                                            DateTime startOnly = DateTime(start.year, start.month, start.day);
-                                            DateTime endOnly = DateTime(end.year, end.month, end.day);
-                                            
-                                            bool isStartDay = isSameDay(day, startOnly);
-                                            bool isEndDay = isSameDay(day, endOnly);
-                                            
-                                            // 가운데 글씨를 위치시키기 위해 정확한 중간 날짜 계산
-                                            int span = endOnly.difference(startOnly).inDays + 1;
-                                            DateTime midDay = startOnly.add(Duration(days: span ~/ 2));
-                                            bool isMidDay = isSameDay(day, midDay);
-                                            bool showText = isMidDay || (span == 1);
-                                            
-                                            int hash = doc.id.hashCode.abs();
-                                            Color baseColor = baseColors[hash % baseColors.length];
-                                            int track = eventTracks[doc.id] ?? 0;
-
-                                            return Positioned(
-                                              top: 28.h + (track * 16.h),
-                                              left: isStartDay ? 2 : 0,
-                                              right: isEndDay ? 2 : 0,
-                                              height: 14.h,
-                                              child: Container(
-                                                decoration: BoxDecoration(
-                                                  color: baseColor.withOpacity(theme.name.contains('다크') ? 0.3 : 0.15),
-                                                  borderRadius: BorderRadius.horizontal(
-                                                    left: isStartDay ? Radius.circular(4) : Radius.zero,
-                                                    right: isEndDay ? Radius.circular(4) : Radius.zero,
-                                                  ),
-                                                ),
-                                                alignment: Alignment.center,
-                                                child: showText
-                                                    ? Text(
-                                                        title,
-                                                        style: TextStyle(
-                                                          fontSize: 9.sp,
-                                                          fontWeight: FontWeight.w600,
-                                                          color: theme.name.contains('다크') ? baseColor.withOpacity(0.9) : baseColor,
-                                                        ),
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow.clip,
-                                                      )
-                                                    : SizedBox.shrink(),
+                                      child: Container(
+                                        color: Colors.transparent,
+                                        child: Row(
+                                          children: [
+                                            Text(
+                                              '${_focusedDay.year}년 ${_focusedDay.month}월',
+                                              style: TextStyle(
+                                                fontSize: 22.sp,
+                                                fontWeight: FontWeight.bold,
+                                                color: theme.textHeader,
                                               ),
-                                            );
-                                          }).toList(),
+                                            ),
+                                            Icon(
+                                              _isPickerExpanded
+                                                  ? Icons.arrow_drop_up_rounded
+                                                  : Icons.arrow_drop_down_rounded,
+                                              color: theme.textHeader,
+                                              size: 32,
+                                            ),
+                                          ],
                                         ),
-                                      );
-                                    },
-                                  ),
-                                  calendarStyle: CalendarStyle(
-                                    todayDecoration: BoxDecoration(
-                                      color: theme.accent1.withOpacity(0.5),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: theme.accent1,
-                                        width: 2,
                                       ),
                                     ),
-                                    todayTextStyle: TextStyle(
-                                      color: theme.textHeader,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    selectedDecoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          theme.primary,
-                                          theme.primaryLight,
-                                        ],
-                                      ),
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: theme.primary.withOpacity(0.4),
-                                          blurRadius: 10,
-                                          offset: Offset(0, 4),
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          onPressed: _previousMonth,
+                                          icon: Icon(
+                                            Icons.chevron_left_rounded,
+                                            size: 28,
+                                          ),
+                                          color: theme.primaryLight,
+                                        ),
+                                        IconButton(
+                                          onPressed: _nextMonth,
+                                          icon: Icon(
+                                            Icons.chevron_right_rounded,
+                                            size: 28,
+                                          ),
+                                          color: theme.primaryLight,
                                         ),
                                       ],
                                     ),
-                                    defaultTextStyle: TextStyle(
-                                      color: theme.textHeader,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    weekendTextStyle: TextStyle(
-                                      color: theme.accent2,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    outsideDaysVisible: false,
-                                                  ),
+                                  ],
                                 ),
-                            ],
+                                SizedBox(height: 8.h),
+                                if (_isPickerExpanded)
+                                  SizedBox(
+                                    height: 150,
+                                    child: CupertinoTheme(
+                                      data: CupertinoThemeData(
+                                        textTheme: CupertinoTextThemeData(
+                                          dateTimePickerTextStyle: TextStyle(
+                                            color: theme.textHeader,
+                                            fontSize: 18.sp,
+                                          ),
+                                        ),
+                                      ),
+                                      child: CupertinoDatePicker(
+                                        mode: CupertinoDatePickerMode.monthYear,
+                                        initialDateTime: _focusedDay,
+                                        minimumYear: 1900,
+                                        maximumYear: 2080,
+                                        onDateTimeChanged: (newDate) => setState(
+                                          () => _focusedDay = DateTime(
+                                            newDate.year,
+                                            newDate.month,
+                                            1,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Expanded(
+                                    child: RepaintBoundary(
+                                      child: TableCalendar(
+                                        shouldFillViewport: true,
+                                        firstDay: DateTime.utc(1900, 1, 1),
+                                        lastDay: DateTime.utc(2080, 12, 31),
+                                        focusedDay: _focusedDay,
+                                        rowHeight: 92.h,
+                                        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                                        onDaySelected: (selectedDay, focusedDay) {
+                                          setState(() {
+                                            _selectedDay = selectedDay;
+                                            _focusedDay = focusedDay;
+                                          });
+                                          _showUnifiedDaySheet(theme, selectedDay, allEvents);
+                                        },
+                                        onPageChanged: (focusedDay) => setState(() => _focusedDay = focusedDay),
+                                        headerVisible: false,
+                                        eventLoader: (day) {
+                                          return allEvents.where((doc) {
+                                            if (doc.data() is Map<String, dynamic> &&
+                                                (doc.data() as Map<String, dynamic>).containsKey('startTime') &&
+                                                (doc.data() as Map<String, dynamic>).containsKey('endTime')) {
+                                              DateTime start = (doc['startTime'] as Timestamp).toDate();
+                                              DateTime end = (doc['endTime'] as Timestamp).toDate();
+                                              return _isDayInRange(day, start, end);
+                                            }
+                                            return false;
+                                          }).toList();
+                                        },
+                                        calendarBuilders: CalendarBuilders(
+                                          defaultBuilder: (context, day, focusedDay) {
+                                            Color textColor = (day.weekday == DateTime.sunday || day.weekday == DateTime.saturday) ? theme.accent2 : theme.textHeader;
+                                            return Align(alignment: Alignment.topCenter, child: Padding(padding: EdgeInsets.only(top: 6.h), child: Text('${day.day}', style: TextStyle(color: textColor, fontSize: 13.sp))));
+                                          },
+                                          outsideBuilder: (context, day, focusedDay) => Align(alignment: Alignment.topCenter, child: Padding(padding: EdgeInsets.only(top: 6.h), child: Text('${day.day}', style: TextStyle(color: theme.textBody.withOpacity(0.5), fontSize: 13.sp)))),
+                                          todayBuilder: (context, day, focusedDay) => Align(alignment: Alignment.topCenter, child: Container(margin: EdgeInsets.only(top: 6.h), width: 22.h, height: 22.h, decoration: BoxDecoration(color: theme.accent1.withOpacity(0.5), shape: BoxShape.circle), child: Center(child: Text('${day.day}', style: TextStyle(color: theme.textHeader, fontWeight: FontWeight.bold, fontSize: 12.sp))))),
+                                          selectedBuilder: (context, day, focusedDay) => Align(alignment: Alignment.topCenter, child: Container(margin: EdgeInsets.only(top: 6.h), width: 22.h, height: 22.h, decoration: BoxDecoration(gradient: LinearGradient(colors: [theme.primary, theme.primaryLight]), shape: BoxShape.circle), child: Center(child: Text('${day.day}', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12.sp))))),
+                                          markerBuilder: (context, day, events) {
+                                            if (events.isEmpty) return SizedBox();
+                                            final filteredEvents = events.cast<QueryDocumentSnapshot>().where((doc) {
+                                              return (eventTracks[doc.id] ?? 99) < 4;
+                                            }).toList();
+                                            return Positioned.fill(
+                                              child: Stack(
+                                                clipBehavior: Clip.none,
+                                                children: filteredEvents.map((doc) {
+                                                  final data = doc.data() as Map<String, dynamic>;
+                                                  final title = data['title'] ?? '';
+                                                  final start = (data['startTime'] as Timestamp).toDate();
+                                                  final end = (data['endTime'] as Timestamp).toDate();
+                                                  DateTime startOnly = DateTime(start.year, start.month, start.day);
+                                                  DateTime endOnly = DateTime(end.year, end.month, end.day);
+                                                  bool isStartDay = isSameDay(day, startOnly);
+                                                  bool isEndDay = isSameDay(day, endOnly);
+                                                  int span = endOnly.difference(startOnly).inDays + 1;
+                                                  DateTime midDay = startOnly.add(Duration(days: span ~/ 2));
+                                                  bool isMidDay = isSameDay(day, midDay);
+                                                  bool showText = isMidDay || (span == 1);
+                                                  Color baseColor;
+                                                  if (data.containsKey('colorValue')) {
+                                                    baseColor = Color(data['colorValue']);
+                                                  } else {
+                                                    final colors = [theme.primary, theme.accent1, theme.accent2];
+                                                    baseColor = colors[doc.id.hashCode.abs() % colors.length];
+                                                  }
+                                                  int track = eventTracks[doc.id] ?? 0;
+                                                  return Positioned(
+                                                    top: 32.h + (track * 15.h),
+                                                    left: isStartDay ? 2 : 0,
+                                                    right: isEndDay ? 2 : 0,
+                                                    height: 13.h,
+                                                    child: Container(
+                                                      decoration: BoxDecoration(
+                                                        color: baseColor.withOpacity(theme.name.contains('다크') ? 0.3 : 0.15),
+                                                        borderRadius: BorderRadius.horizontal(
+                                                          left: isStartDay ? Radius.circular(4) : Radius.zero,
+                                                          right: isEndDay ? Radius.circular(4) : Radius.zero,
+                                                        ),
+                                                      ),
+                                                      alignment: Alignment.center,
+                                                      child: showText
+                                                          ? Text(
+                                                              title,
+                                                              style: TextStyle(
+                                                                fontSize: 8.sp,
+                                                                fontWeight: FontWeight.w600,
+                                                                color: theme.name.contains('다크') ? baseColor.withOpacity(0.9) : baseColor,
+                                                              ),
+                                                              maxLines: 1,
+                                                              overflow: TextOverflow.clip,
+                                                            )
+                                                          : SizedBox.shrink(),
+                                                    ),
+                                                  );
+                                                }).toList(),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                        calendarStyle: CalendarStyle(
+                                          todayDecoration: BoxDecoration(
+                                            color: theme.accent1.withOpacity(0.5),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: theme.accent1, width: 2),
+                                          ),
+                                          todayTextStyle: TextStyle(color: theme.textHeader, fontWeight: FontWeight.bold),
+                                          selectedDecoration: BoxDecoration(
+                                            gradient: LinearGradient(colors: [theme.primary, theme.primaryLight]),
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: theme.primary.withOpacity(0.4),
+                                                blurRadius: 10,
+                                                offset: Offset(0, 4),
+                                              ),
+                                            ],
+                                          ),
+                                          defaultTextStyle: TextStyle(color: theme.textHeader, fontWeight: FontWeight.w500),
+                                          weekendTextStyle: TextStyle(color: theme.accent2, fontWeight: FontWeight.w500),
+                                          outsideDaysVisible: false,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
-                        SizedBox(height: 24.h),
-                      ],
-                    ),
+                      ),
+                      SizedBox(height: 8.h),
+                    ],
                   );
                 },
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );

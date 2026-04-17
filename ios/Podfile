@@ -39,5 +39,23 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    
+    # gRPC-Core OS_CODE 매크로 충돌 방지
+    if target.name == 'gRPC-Core'
+      target.build_configurations.each do |config|
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)', 'HAVE_UNISTD_H']
+      end
+    end
+
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      
+      # 중복 라이브러리 및 링커 오류 방지 설정
+      config.build_settings['LD_VERIFY_BITCODE'] = 'NO'
+      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      
+      # ‘Ignoring duplicate libraries’ 경고 관련
+      config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
+    end
   end
 end

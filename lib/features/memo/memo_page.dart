@@ -1,3 +1,4 @@
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 // ignore_for_file: prefer_const_constructors
 // ignore_for_file: prefer_const_literals_to_create_immutables
 // ignore_for_file: use_build_context_synchronously
@@ -198,52 +199,56 @@ class _MemoPageState extends State<MemoPage> {
     return ValueListenableBuilder<AppThemeColor>(
       valueListenable: appThemeNotifier,
       builder: (context, theme, child) {
-        return SafeArea(
-          child: Stack(
-            children: [
-              Positioned(
-                top: -50,
-                left: -50,
-                child: GlowBackground(color: theme.accent1, size: 250),
+        return Stack(
+          children: [
+            Positioned(
+              top: -50,
+              left: -50,
+              child: GlowBackground(color: theme.accent1, size: 250),
+            ),
+            Positioned(
+              bottom: -100,
+              right: -100,
+              child: GlowBackground(color: theme.primaryLight, size: 350),
+            ),
+            Padding(
+              padding: EdgeInsets.only(
+                left: 20.w,
+                right: 20.w,
+                bottom: 8.h,
+                top: MediaQuery.of(context).padding.top + 4.h,
               ),
-              Positioned(
-                bottom: -100,
-                right: -100,
-                child: GlowBackground(color: theme.primaryLight, size: 350),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-                child: Column(
+              child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 8),
+                    SizedBox(height: 4.h),
                     Row(
                       children: [
                         Icon(
                           Icons.auto_awesome_rounded,
                           color: theme.accent1,
-                          size: 28,
+                          size: 20,
                         ),
                         const SizedBox(width: 8),
                         Text(
                           '오늘의 이야기',
                           style: TextStyle(
-                            fontSize: 32,
+                            fontSize: 28.sp,
                             fontWeight: FontWeight.bold,
                             color: theme.textHeader,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 2.h),
                     Text(
                       '당신만의 특별한 순간을 기록해보세요',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 13.sp,
                         color: theme.textBody.withOpacity(0.6),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 8.h),
 
                     Expanded(
                       child: Container(
@@ -400,11 +405,10 @@ class _MemoPageState extends State<MemoPage> {
                 ),
               ),
             ],
-          ),
-        );
-      },
-    );
-  }
+          );
+        },
+      );
+    }
 
   Widget _buildHoverIconButton(Color color, IconData icon) {
     return Container(

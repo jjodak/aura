@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/custom_toast.dart';
+import '../../core/services/notification_service.dart';
 
 // --- 💡 일정 추가/수정용 바텀 시트 ---
 // 원래 _EventBottomSheet (private)였으나 별도 파일로 분리하면서 public으로 변경
@@ -29,21 +30,44 @@ class EventBottomSheet extends StatefulWidget {
 
 class _EventBottomSheetState extends State<EventBottomSheet> {
   final TextEditingController _eventController = TextEditingController();
+  final FocusNode _titleFocus = FocusNode();
   late DateTime _startDateTime;
   late DateTime _endDateTime;
   int? _alarmMinutes;
   bool _isStartPickerOpen = false;
   bool _isEndPickerOpen = false;
+  late int _selectedColorValue;
+
+  final List<Color> _eventColors = [
+    const Color(0xFF588157), // Earth Green
+    const Color(0xFF219EBC), // Ocean Blue
+    const Color(0xFFE56B6F), // Sunset Pink
+    const Color(0xFFE9C46A), // Accent Gold
+    const Color(0xFFD4A373), // Accent Sand
+    const Color(0xFF6D597A), // Muted Purple
+    const Color(0xFF457B9D), // Steel Blue
+    const Color(0xFFFFB5A7), // Peach
+  ];
 
   @override
   void initState() {
     super.initState();
+    _titleFocus.addListener(() {
+      if (_titleFocus.hasFocus) {
+        setState(() {
+          _isStartPickerOpen = false;
+          _isEndPickerOpen = false;
+        });
+      }
+    });
+
     if (widget.eventDoc != null) {
       final data = widget.eventDoc!.data() as Map<String, dynamic>;
       _eventController.text = data['title'] ?? '';
       _startDateTime = (data['startTime'] as Timestamp).toDate();
       _endDateTime = (data['endTime'] as Timestamp).toDate();
       _alarmMinutes = data['alarmMinutes'];
+      _selectedColorValue = data['colorValue'] ?? widget.theme.primary.value;
     } else {
       DateTime now = DateTime.now();
       _startDateTime = DateTime(
@@ -54,11 +78,19 @@ class _EventBottomSheetState extends State<EventBottomSheet> {
         0,
       );
       _endDateTime = _startDateTime.add(const Duration(hours: 1));
+      _selectedColorValue = widget.theme.primary.value;
     }
   }
 
+  @override
+  void dispose() {
+    _titleFocus.dispose();
+    _eventController.dispose();
+    super.dispose();
+  }
+
   void _toggleStartPicker() {
-    FocusScope.of(context).unfocus();
+    _titleFocus.unfocus();
     setState(() {
       _isStartPickerOpen = !_isStartPickerOpen;
       if (_isStartPickerOpen) _isEndPickerOpen = false;
@@ -66,7 +98,7 @@ class _EventBottomSheetState extends State<EventBottomSheet> {
   }
 
   void _toggleEndPicker() {
-    FocusScope.of(context).unfocus();
+    _titleFocus.unfocus();
     setState(() {
       _isEndPickerOpen = !_isEndPickerOpen;
       if (_isEndPickerOpen) _isStartPickerOpen = false;
@@ -74,6 +106,7 @@ class _EventBottomSheetState extends State<EventBottomSheet> {
   }
 
   void _showAlarmPicker() {
+    _titleFocus.unfocus();
     showModalBottomSheet(
       context: context,
       backgroundColor: widget.theme.surface,
@@ -145,18 +178,34 @@ class _EventBottomSheetState extends State<EventBottomSheet> {
       'startTime': Timestamp.fromDate(_startDateTime),
       'endTime': Timestamp.fromDate(_endDateTime),
       'alarmMinutes': _alarmMinutes,
+      'colorValue': _selectedColorValue,
     };
 
+    String docId;
     if (widget.eventDoc == null) {
       data['createdAt'] = FieldValue.serverTimestamp();
-      await FirebaseFirestore.instance
+      final docRef = await FirebaseFirestore.instance
           .collection('users')
           .doc(user?.uid)
           .collection('events')
           .add(data);
+      docId = docRef.id;
     } else {
       data['updatedAt'] = FieldValue.serverTimestamp();
       await widget.eventDoc!.reference.update(data);
+      docId = widget.eventDoc!.id;
+    }
+
+    // 알림 스케줄링
+    final int notificationId = docId.hashCode.abs();
+    await NotificationService().cancelNotification(notificationId); // 기존 알림 취소 (수정 시)
+    if (_alarmMinutes != null) {
+      await NotificationService().scheduleEventNotification(
+        id: notificationId,
+        title: _eventController.text.trim(),
+        scheduledTime: _startDateTime,
+        alarmMinutes: _alarmMinutes!,
+      );
     }
 
     if (mounted) {
@@ -201,12 +250,16 @@ class _EventBottomSheetState extends State<EventBottomSheet> {
               try {
                 final user = FirebaseAuth.instance.currentUser;
                 if (user != null) {
+                  final String docId = widget.eventDoc!.id;
                   await FirebaseFirestore.instance
                       .collection('users')
                       .doc(user.uid)
                       .collection('events')
-                      .doc(widget.eventDoc!.id)
+                      .doc(docId)
                       .delete();
+                  
+                  // 알림 취소
+                  await NotificationService().cancelNotification(docId.hashCode.abs());
                 }
 
                 if (mounted) {
@@ -240,130 +293,192 @@ class _EventBottomSheetState extends State<EventBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                widget.eventDoc == null ? '새로운 일정 추가 🗓️' : '일정 수정 ✏️',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: widget.theme.textHeader,
-                ),
-              ),
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  if (widget.eventDoc != null)
-                    IconButton(
-                      icon: const Icon(
-                        Icons.delete_outline_rounded,
-                        color: Colors.redAccent,
+                  Text(
+                    widget.eventDoc == null ? '새로운 일정 추가 🗓️' : '일정 수정 ✏️',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: widget.theme.textHeader,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      if (widget.eventDoc != null)
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: Colors.redAccent,
+                          ),
+                          onPressed: _deleteEvent,
+                        ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: widget.theme.textBody,
+                        ),
+                        onPressed: () => Navigator.pop(context),
                       ),
-                      onPressed: _deleteEvent,
-                    ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.close_rounded,
-                      color: widget.theme.textBody,
-                    ),
-                    onPressed: () => Navigator.pop(context),
+                    ],
                   ),
                 ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _eventController,
+                focusNode: _titleFocus,
+                style: TextStyle(color: widget.theme.textHeader, fontSize: 18),
+                onTap: () {
+                  setState(() {
+                    _isStartPickerOpen = false;
+                    _isEndPickerOpen = false;
+                  });
+                },
+                decoration: InputDecoration(
+                  hintText: '일정 제목',
+                  hintStyle: TextStyle(
+                    color: widget.theme.textBody.withOpacity(0.5),
+                  ),
+                  filled: true,
+                  fillColor: widget.theme.bg,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // --- 🎨 색상 선택 ---
+              SizedBox(
+                height: 44,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _eventColors.length,
+                  itemBuilder: (context, index) {
+                    final color = _eventColors[index];
+                    final isSelected = _selectedColorValue == color.value;
+                    return GestureDetector(
+                      onTap: () {
+                        FocusScope.of(context).unfocus();
+                        setState(() {
+                             _selectedColorValue = color.value;
+                             _isStartPickerOpen = false;
+                             _isEndPickerOpen = false;
+                        });
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        width: isSelected ? 44 : 36,
+                        height: isSelected ? 44 : 36,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: isSelected
+                              ? Border.all(color: widget.theme.textHeader, width: 2)
+                              : null,
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: color.withOpacity(0.4),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  )
+                                ]
+                              : null,
+                        ),
+                        child: isSelected
+                            ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
+                            : null,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+    
+              _buildDateTimeSection('시작', _startDateTime, true),
+              const SizedBox(height: 12),
+              _buildDateTimeSection('종료', _endDateTime, false),
+              const SizedBox(height: 16),
+    
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    _isStartPickerOpen = false;
+                    _isEndPickerOpen = false;
+                  });
+                  _showAlarmPicker();
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: widget.theme.bg,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.notifications_active_rounded,
+                        color: widget.theme.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        '알림',
+                        style: TextStyle(
+                          color: widget.theme.textBody,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        _getAlarmText(),
+                        style: TextStyle(
+                          color: widget.theme.textHeader,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+    
+              ElevatedButton(
+                onPressed: _saveEvent,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(_selectedColorValue),
+                  minimumSize: const Size(double.infinity, 56),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  widget.eventDoc == null ? '일정 저장하기' : '수정 완료',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _eventController,
-            style: TextStyle(color: widget.theme.textHeader, fontSize: 18),
-            decoration: InputDecoration(
-              hintText: '일정 제목',
-              hintStyle: TextStyle(
-                color: widget.theme.textBody.withOpacity(0.5),
-              ),
-              filled: true,
-              fillColor: widget.theme.bg,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          _buildDateTimeSection('시작', _startDateTime, true),
-          const SizedBox(height: 16),
-          _buildDateTimeSection('종료', _endDateTime, false),
-          const SizedBox(height: 16),
-
-          InkWell(
-            onTap: _showAlarmPicker,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              decoration: BoxDecoration(
-                color: widget.theme.bg,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.notifications_active_rounded,
-                    color: widget.theme.primary,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '알림',
-                    style: TextStyle(
-                      color: widget.theme.textBody,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    _getAlarmText(),
-                    style: TextStyle(
-                      color: widget.theme.textHeader,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          ElevatedButton(
-            onPressed: _saveEvent,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: widget.theme.primary,
-              minimumSize: const Size(double.infinity, 56),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            child: Text(
-              widget.eventDoc == null ? '일정 저장하기' : '수정 완료',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -415,7 +530,7 @@ class _EventBottomSheetState extends State<EventBottomSheet> {
         AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
-          height: isOpen ? 200 : 0,
+          height: isOpen ? 180 : 0,
           margin: const EdgeInsets.only(top: 8),
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(),

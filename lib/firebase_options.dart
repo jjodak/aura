@@ -59,20 +59,20 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyB7v5pWgbQvwE9IVwaCTG5WPboZXQEQOC0',
-    appId: '1:386624962173:ios:fed9e62a9967e0a2b2fb14',
+    appId: '1:386624962173:ios:0920fb82e4f56aa6b2fb14',
     messagingSenderId: '386624962173',
     projectId: 'aura-b548b',
     storageBucket: 'aura-b548b.firebasestorage.app',
-    iosBundleId: 'com.example.aura',
+    iosBundleId: 'com.junhyuk.aura',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyB7v5pWgbQvwE9IVwaCTG5WPboZXQEQOC0',
-    appId: '1:386624962173:ios:fed9e62a9967e0a2b2fb14',
+    appId: '1:386624962173:ios:0920fb82e4f56aa6b2fb14',
     messagingSenderId: '386624962173',
     projectId: 'aura-b548b',
     storageBucket: 'aura-b548b.firebasestorage.app',
-    iosBundleId: 'com.example.aura',
+    iosBundleId: 'com.junhyuk.aura',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

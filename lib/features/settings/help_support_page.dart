@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_const_constructors
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/custom_toast.dart';
@@ -12,39 +13,46 @@ class HelpSupportPage extends StatelessWidget {
   Widget _buildFaqItem(AppThemeColor theme, String question, String answer) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+      child: Material(
         color: theme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.primaryLight.withOpacity(0.2)),
-      ),
-      child: Theme(
-        data: ThemeData(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          iconColor: theme.primary,
-          collapsedIconColor: theme.textBody.withOpacity(0.5),
-          title: Text(
-            question,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: theme.textHeader,
-              fontSize: 15,
-            ),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: theme.primaryLight.withOpacity(0.2)),
+        ),
+        child: Theme(
+          data: ThemeData(
+            dividerColor: Colors.transparent,
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
           ),
-          childrenPadding: const EdgeInsets.only(
-            left: 16,
-            right: 16,
-            bottom: 16,
-          ),
-          children: [
-            Text(
-              answer,
+          child: ExpansionTile(
+            iconColor: theme.primary,
+            collapsedIconColor: theme.textBody.withOpacity(0.5),
+            title: Text(
+              question,
               style: TextStyle(
-                color: theme.textBody,
-                fontSize: 14,
-                height: 1.5,
+                fontWeight: FontWeight.bold,
+                color: theme.textHeader,
+                fontSize: 15,
               ),
             ),
-          ],
+            childrenPadding: const EdgeInsets.only(
+              left: 16,
+              right: 16,
+              bottom: 16,
+            ),
+            children: [
+              Text(
+                answer,
+                style: TextStyle(
+                  color: theme.textBody,
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -144,13 +152,21 @@ class HelpSupportPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton(
-                        onPressed: () {
-                          // 💡 이메일 주소 업데이트 완료
-                          CustomToast.show(
-                            context,
-                            '아래 이메일로 문의를 남겨주세요!\nll.team.aura.ll@gmail.com',
-                            theme.primary,
+                        onPressed: () async {
+                          final Uri emailLaunchUri = Uri(
+                            scheme: 'mailto',
+                            path: 'll.team.aura.ll@gmail.com',
+                            query: 'subject=Aura 앱 문의',
                           );
+                          if (!await launchUrl(emailLaunchUri)) {
+                            if (context.mounted) {
+                              CustomToast.show(
+                                context,
+                                '메일 앱을 열 수 없습니다. 아래 주소로 문의를 남겨주세요!\nll.team.aura.ll@gmail.com',
+                                theme.primary,
+                              );
+                            }
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: theme.primary,

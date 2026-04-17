@@ -20,6 +20,19 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _selectedIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   static const List<Widget> _pages = <Widget>[
     MemoPage(),
@@ -34,7 +47,14 @@ class _MainScreenState extends State<MainScreen> {
       valueListenable: appThemeNotifier,
       builder: (context, theme, child) {
         return Scaffold(
-          body: IndexedStack(index: _selectedIndex, children: _pages),
+          body: PageView(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() => _selectedIndex = index);
+            },
+            physics: const BouncingScrollPhysics(),
+            children: _pages,
+          ),
           bottomNavigationBar: Container(
             decoration: BoxDecoration(
               boxShadow: [
@@ -73,7 +93,14 @@ class _MainScreenState extends State<MainScreen> {
               elevation: 0,
               showUnselectedLabels: true,
               type: BottomNavigationBarType.fixed,
-              onTap: (index) => setState(() => _selectedIndex = index),
+              onTap: (index) {
+                setState(() => _selectedIndex = index);
+                _pageController.animateToPage(
+                  index,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              },
             ),
           ),
         );

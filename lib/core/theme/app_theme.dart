@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // --- 🎨 앱 전체 색상 (Figma 디자인 시스템 적용) ---
 class AppThemeColor {
@@ -86,3 +87,22 @@ final List<AppThemeColor> availableThemes = [
   themeSunset,
   themeDark,
 ];
+
+Future<void> loadSavedTheme() async {
+  final prefs = await SharedPreferences.getInstance();
+  final savedName = prefs.getString('aura_theme_name');
+  if (savedName != null) {
+    for (var t in availableThemes) {
+      if (t.name == savedName) {
+        appThemeNotifier.value = t;
+        break;
+      }
+    }
+  }
+}
+
+Future<void> saveSelectedTheme(AppThemeColor theme) async {
+  appThemeNotifier.value = theme;
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('aura_theme_name', theme.name);
+}

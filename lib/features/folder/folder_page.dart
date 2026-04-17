@@ -1,3 +1,4 @@
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 // ignore_for_file: prefer_const_constructors
 // ignore_for_file: prefer_const_literals_to_create_immutables
 // ignore_for_file: use_build_context_synchronously
@@ -22,6 +23,7 @@ class FolderPage extends StatefulWidget {
 
 class _FolderPageState extends State<FolderPage> {
   final User? user = FirebaseAuth.instance.currentUser;
+  bool _isGridView = false;
 
   void _showFolderDialog(
     BuildContext context,
@@ -373,20 +375,25 @@ class _FolderPageState extends State<FolderPage> {
       valueListenable: appThemeNotifier,
       builder: (context, theme, child) {
         final user = FirebaseAuth.instance.currentUser;
-        return SafeArea(
-          child: Stack(
-            children: [
-              Positioned(
-                top: 80,
-                right: -50,
-                child: GlowBackground(color: theme.primary, size: 320),
+        return Stack(
+          children: [
+            Positioned(
+              top: 80,
+              right: -50,
+              child: GlowBackground(color: theme.primary, size: 320),
+            ),
+            SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.only(
+                left: 20.w,
+                right: 20.w,
+                bottom: 8.h,
+                top: MediaQuery.of(context).padding.top + 4.h,
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-                child: Column(
+              child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 8),
+                    SizedBox(height: 4.h),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -398,285 +405,312 @@ class _FolderPageState extends State<FolderPage> {
                                 Icon(
                                   Icons.auto_awesome_rounded,
                                   color: theme.accent1,
-                                  size: 24,
+                                  size: 20,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
                                   'My Collection',
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 12.sp,
                                     fontWeight: FontWeight.w600,
                                     color: theme.textBody.withOpacity(0.6),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: 2.h),
                             Text(
                               '나만의 공간',
                               style: TextStyle(
-                                fontSize: 36,
+                                fontSize: 28.sp,
                                 fontWeight: FontWeight.bold,
                                 color: theme.textHeader,
-                                height: 1.2,
+                                height: 1.1,
                               ),
                             ),
                           ],
                         ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.delete_outline_rounded,
-                            color: theme.accent1,
-                            size: 28,
-                          ),
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const TrashPage(),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                _isGridView ? Icons.list_alt_rounded : Icons.grid_view_rounded,
+                                color: theme.accent1,
+                                size: 24,
+                              ),
+                              onPressed: () => setState(() => _isGridView = !_isGridView),
                             ),
-                          ),
+                            IconButton(
+                              icon: Icon(
+                                Icons.delete_outline_rounded,
+                                color: theme.accent1,
+                                size: 24,
+                              ),
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const TrashPage(),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4.h),
                     Text(
                       '소중한 기억들을 카테고리별로 정리해요\n(폴더를 길게 누르면 편집/삭제 가능해요)',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13.sp,
                         color: theme.textBody.withOpacity(0.6),
+                        height: 1.5,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 4.h),
 
-                    Expanded(
-                      child: StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(user?.uid)
-                            .collection('folders')
-                            .orderBy('createdAt')
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
+                    StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(user?.uid)
+                          .collection('folders')
+                          .orderBy('createdAt')
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
 
-                          final folders = snapshot.data?.docs ?? [];
+                        final folders = snapshot.data?.docs ?? [];
 
-                          return ListView.builder(
-                            physics: const BouncingScrollPhysics(),
+                        if (_isGridView) {
+                          return GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 16,
+                              crossAxisSpacing: 16,
+                              childAspectRatio: 1.1,
+                            ),
                             itemCount: folders.length + 1,
                             itemBuilder: (context, index) {
                               if (index == folders.length) {
-                                return Container(
-                                  margin: const EdgeInsets.only(
-                                    top: 8,
-                                    bottom: 20,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(24),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: theme.primaryLight.withOpacity(
-                                          0.1,
-                                        ),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Material(
-                                    color: theme.surface.withOpacity(0.8),
-                                    borderRadius: BorderRadius.circular(24),
-                                    child: InkWell(
-                                      onTap: () =>
-                                          _showFolderDialog(context, theme),
-                                      borderRadius: BorderRadius.circular(24),
-                                      hoverColor: theme.primaryLight
-                                          .withOpacity(0.1),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(20),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                            color: theme.primaryLight
-                                                .withOpacity(0.5),
-                                            width: 2,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            24,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Container(
-                                              width: 48,
-                                              height: 48,
-                                              decoration: BoxDecoration(
-                                                color: theme.primaryLight
-                                                    .withOpacity(0.3),
-                                                borderRadius:
-                                                    BorderRadius.circular(16),
-                                              ),
-                                              child: Icon(
-                                                Icons.add_rounded,
-                                                color: theme.primary,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Text(
-                                              '새 폴더 만들기',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                                color: theme.textHeader,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
+                                return _buildGridAddButton(theme);
                               }
-
-                              final doc = folders[index];
-                              final String name = doc['name'];
-                              final int count = doc['count'] ?? 0;
-                              final Color c = Color(doc['colorValue']);
-
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 16),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(24),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: theme.name.contains('다크')
-                                          ? Colors.black.withOpacity(0.3)
-                                          : c.withOpacity(0.15),
-                                      blurRadius: 32,
-                                      offset: const Offset(0, 8),
-                                    ),
-                                  ],
-                                ),
-                                child: Material(
-                                  color: theme.surface.withOpacity(0.95),
-                                  borderRadius: BorderRadius.circular(24),
-                                  child: InkWell(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              FolderDetailScreen(
-                                                folderId: doc.id,
-                                                folderName: name,
-                                                folderColor: c,
-                                              ),
-                                        ),
-                                      );
-                                    },
-                                    onLongPress: () =>
-                                        _showFolderOptions(context, theme, doc),
-                                    borderRadius: BorderRadius.circular(24),
-                                    hoverColor: c.withOpacity(0.05),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(24),
-                                      decoration: BoxDecoration(
-                                        border: Border.all(
-                                          color: c.withOpacity(0.3),
-                                        ),
-                                        borderRadius: BorderRadius.circular(24),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 64,
-                                            height: 64,
-                                            decoration: BoxDecoration(
-                                              color: c.withOpacity(0.25),
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                            ),
-                                            child: Icon(
-                                              Icons.folder_rounded,
-                                              color: c,
-                                              size: 32,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 20),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  name,
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 18,
-                                                    color: theme.textHeader,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Row(
-                                                  children: [
-                                                    Text(
-                                                      '$count개의 메모',
-                                                      style: TextStyle(
-                                                        fontSize: 14,
-                                                        fontWeight:
-                                                            FontWeight.w500,
-                                                        color: theme.textBody,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Icon(
-                                                      Icons.trending_up_rounded,
-                                                      size: 16,
-                                                      color: c,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          Container(
-                                            width: 40,
-                                            height: 40,
-                                            decoration: BoxDecoration(
-                                              color: c.withOpacity(0.15),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: Icon(
-                                              Icons.arrow_forward_ios_rounded,
-                                              color: c,
-                                              size: 18,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
+                              return _buildGridFolderItem(theme, folders[index]);
                             },
                           );
+                        }
+
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: folders.length + 1,
+                          itemBuilder: (context, index) {
+                            if (index == folders.length) {
+                              return _buildListAddButton(theme);
+                            }
+                            return _buildListFolderItem(theme, folders[index]);
+                          },
+                        );
                         },
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+              ],
+            );
+          },
+        );
+      }
+
+  // --- 추가된 보조 위젯 빌더들 ---
+
+  Widget _buildListAddButton(AppThemeColor theme) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8, bottom: 20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: theme.primaryLight.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: theme.surface.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: () => _showFolderDialog(context, theme),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border.all(color: theme.primaryLight.withOpacity(0.4), width: 1.5),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.add_rounded, color: theme.primary, size: 24),
+                const SizedBox(width: 10),
+                Text(
+                  '새 폴더 만들기',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.textHeader),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGridAddButton(AppThemeColor theme) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.primaryLight.withOpacity(0.4), width: 1.5, style: BorderStyle.solid),
+      ),
+      child: Material(
+        color: theme.surface.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: () => _showFolderDialog(context, theme),
+          borderRadius: BorderRadius.circular(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.add_circle_outline_rounded, color: theme.primary, size: 28),
+              const SizedBox(height: 6),
+              Text(
+                '새 폴더',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.textHeader),
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListFolderItem(AppThemeColor theme, DocumentSnapshot doc) {
+    final String name = doc['name'];
+    final int count = doc['count'] ?? 0;
+    final Color c = Color(doc['colorValue']);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: theme.name.contains('다크') ? Colors.black.withOpacity(0.2) : c.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: theme.surface.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => FolderDetailScreen(folderId: doc.id, folderName: name, folderColor: c))),
+          onLongPress: () => _showFolderOptions(context, theme, doc),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              border: Border.all(color: c.withOpacity(0.2)),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(color: c.withOpacity(0.2), borderRadius: BorderRadius.circular(14)),
+                  child: Icon(Icons.folder_rounded, color: c, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.textHeader)),
+                      Text('$count개의 메모', style: TextStyle(fontSize: 12, color: theme.textBody.withOpacity(0.7))),
+                    ],
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios_rounded, color: c.withOpacity(0.5), size: 14),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGridFolderItem(AppThemeColor theme, DocumentSnapshot doc) {
+    final String name = doc['name'];
+    final int count = doc['count'] ?? 0;
+    final Color c = Color(doc['colorValue']);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: theme.name.contains('다크') ? Colors.black.withOpacity(0.2) : c.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: theme.surface.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => FolderDetailScreen(folderId: doc.id, folderName: name, folderColor: c))),
+          onLongPress: () => _showFolderOptions(context, theme, doc),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: c.withOpacity(0.25)),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(color: c.withOpacity(0.2), borderRadius: BorderRadius.circular(14)),
+                  child: Icon(Icons.folder_rounded, color: c, size: 24),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  name,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.textHeader),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  '$count',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: theme.textBody.withOpacity(0.6)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

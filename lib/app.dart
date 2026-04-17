@@ -10,9 +10,37 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/auth/auth_wrapper.dart';
+import 'core/services/notification_service.dart';
 
-class AuraApp extends StatelessWidget {
+class AuraApp extends StatefulWidget {
   const AuraApp({super.key});
+
+  @override
+  State<AuraApp> createState() => _AuraAppState();
+}
+
+class _AuraAppState extends State<AuraApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // 앱 시작 시 배지 초기화
+    NotificationService().clearBadge();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // 앱이 포그라운드로 돌아올 때 배지 초기화
+      NotificationService().clearBadge();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
