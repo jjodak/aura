@@ -83,4 +83,5 @@ class DefaultFirebaseOptions {
     authDomain: 'aura-b548b.firebaseapp.com',
     storageBucket: 'aura-b548b.firebasestorage.app',
   );
+
 }
