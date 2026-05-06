@@ -47,6 +47,16 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>메모에 사진 속 텍스트를 입력하기 위해 카메라 접근이 필요합니다.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_dartobservatory._tcp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>디버그 실행 중 Dart VM Service 연결을 위해 로컬 네트워크 접근이 필요합니다.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>메모에 사진 속 텍스트를 입력하기 위해 사진 보관함 접근이 필요합니다.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

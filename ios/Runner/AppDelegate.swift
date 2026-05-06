@@ -1,4 +1,3 @@
-import FirebaseCore
 import Flutter
 import UIKit
 import UserNotifications
@@ -9,14 +8,12 @@ import UserNotifications
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    FirebaseApp.configure()
-    
     if #available(iOS 10.0, *) {
       UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate
     }
 
     let result = super.application(application, didFinishLaunchingWithOptions: launchOptions)
-    
+
     // MethodChannel 설정을 안전하게 처리 (SceneDelegate 환경 고려)
     if let controller = window?.rootViewController as? FlutterViewController {
       setupBadgeChannel(messenger: controller.binaryMessenger)

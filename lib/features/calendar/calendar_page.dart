@@ -39,7 +39,8 @@ class _CalendarPageState extends State<CalendarPage> {
       ..sort((a, b) {
         final dataA = a.data() as Map<String, dynamic>;
         final dataB = b.data() as Map<String, dynamic>;
-        if (!dataA.containsKey('startTime') || !dataB.containsKey('startTime')) return 0;
+        if (!dataA.containsKey('startTime') || !dataB.containsKey('startTime'))
+          return 0;
 
         final startA = (dataA['startTime'] as Timestamp).toDate();
         final endA = (dataA['endTime'] as Timestamp).toDate();
@@ -139,7 +140,11 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
-  void _showUnifiedDaySheet(AppThemeColor theme, DateTime day, List<QueryDocumentSnapshot> allEvents) {
+  void _showUnifiedDaySheet(
+    AppThemeColor theme,
+    DateTime day,
+    List<QueryDocumentSnapshot> allEvents,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: theme.surface,
@@ -172,13 +177,17 @@ class _CalendarPageState extends State<CalendarPage> {
                   children: [
                     Text(
                       '${day.month}월 ${day.day}일의 하루 🗓️',
-                      style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold, color: theme.textHeader),
+                      style: TextStyle(
+                        fontSize: 22.sp,
+                        fontWeight: FontWeight.bold,
+                        color: theme.textHeader,
+                      ),
                     ),
                     IconButton(
                       icon: Icon(Icons.add_rounded, color: theme.primary),
                       onPressed: () {
-                         Navigator.pop(sheetContext);
-                         _showEventSheet(theme);
+                        Navigator.pop(sheetContext);
+                        _showEventSheet(theme);
                       },
                     ),
                   ],
@@ -188,29 +197,47 @@ class _CalendarPageState extends State<CalendarPage> {
                   labelColor: theme.primary,
                   unselectedLabelColor: theme.textBody.withOpacity(0.5),
                   indicatorColor: theme.primary,
-                  tabs: [Tab(text: '일정'), Tab(text: '메모')],
+                  tabs: [
+                    Tab(text: '일정'),
+                    Tab(text: '메모'),
+                  ],
                 ),
                 SizedBox(height: 16.h),
                 Expanded(
                   child: TabBarView(
                     children: [
                       dayEvents.isEmpty
-                          ? Center(child: Text('등록된 일정이 없습니다.', style: TextStyle(color: theme.textBody)))
+                          ? Center(
+                              child: Text(
+                                '등록된 일정이 없습니다.',
+                                style: TextStyle(color: theme.textBody),
+                              ),
+                            )
                           : ListView.builder(
                               physics: BouncingScrollPhysics(),
-                              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                              keyboardDismissBehavior:
+                                  ScrollViewKeyboardDismissBehavior.onDrag,
                               itemCount: dayEvents.length,
                               itemBuilder: (context, index) {
                                 final doc = dayEvents[index];
                                 final data = doc.data() as Map<String, dynamic>;
                                 String title = data['title'] ?? '';
-                                DateTime start = (data['startTime'] as Timestamp).toDate();
-                                DateTime end = (data['endTime'] as Timestamp).toDate();
-                                String timeStr = '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')} ~ ${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}';
+                                DateTime start =
+                                    (data['startTime'] as Timestamp).toDate();
+                                DateTime end = (data['endTime'] as Timestamp)
+                                    .toDate();
+                                String timeStr =
+                                    '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')} ~ ${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}';
 
                                 return Container(
                                   margin: EdgeInsets.only(bottom: 12.h),
-                                  decoration: BoxDecoration(color: theme.bg, borderRadius: BorderRadius.circular(16.r), border: Border.all(color: theme.accent1.withOpacity(0.3))),
+                                  decoration: BoxDecoration(
+                                    color: theme.bg,
+                                    borderRadius: BorderRadius.circular(16.r),
+                                    border: Border.all(
+                                      color: theme.accent1.withOpacity(0.3),
+                                    ),
+                                  ),
                                   child: Material(
                                     color: Colors.transparent,
                                     child: InkWell(
@@ -222,11 +249,37 @@ class _CalendarPageState extends State<CalendarPage> {
                                       child: Padding(
                                         padding: EdgeInsets.all(16.w),
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            Text(title, style: TextStyle(color: theme.textHeader, fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                                            Text(
+                                              title,
+                                              style: TextStyle(
+                                                color: theme.textHeader,
+                                                fontSize: 16.sp,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
                                             SizedBox(height: 4.h),
-                                            Row(children: [Icon(Icons.access_time_rounded, size: 14, color: theme.textBody.withOpacity(0.6)), SizedBox(width: 6.w), Text(timeStr, style: TextStyle(color: theme.textBody.withOpacity(0.6), fontSize: 13.sp))]),
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.access_time_rounded,
+                                                  size: 14,
+                                                  color: theme.textBody
+                                                      .withOpacity(0.6),
+                                                ),
+                                                SizedBox(width: 6.w),
+                                                Text(
+                                                  timeStr,
+                                                  style: TextStyle(
+                                                    color: theme.textBody
+                                                        .withOpacity(0.6),
+                                                    fontSize: 13.sp,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -236,30 +289,64 @@ class _CalendarPageState extends State<CalendarPage> {
                               },
                             ),
                       StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance.collection('users').doc(user?.uid).collection('memos').snapshots(),
+                        stream: FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(user?.uid)
+                            .collection('memos')
+                            .snapshots(),
                         builder: (context, snapshot) {
-                          if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
-                          DateTime startOfDay = DateTime(day.year, day.month, day.day);
-                          DateTime endOfDay = DateTime(day.year, day.month, day.day, 23, 59, 59, 999);
+                          if (!snapshot.hasData)
+                            return Center(child: CircularProgressIndicator());
+                          DateTime startOfDay = DateTime(
+                            day.year,
+                            day.month,
+                            day.day,
+                          );
+                          DateTime endOfDay = DateTime(
+                            day.year,
+                            day.month,
+                            day.day,
+                            23,
+                            59,
+                            59,
+                            999,
+                          );
 
                           final dayMemos = snapshot.data!.docs.where((doc) {
                             if (doc['folderId'] == 'trash') return false;
-                            DateTime dt = (doc['createdAt'] as Timestamp).toDate();
-                            return dt.isAfter(startOfDay.subtract(Duration(seconds: 1))) && dt.isBefore(endOfDay);
+                            DateTime dt = (doc['createdAt'] as Timestamp)
+                                .toDate();
+                            return dt.isAfter(
+                                  startOfDay.subtract(Duration(seconds: 1)),
+                                ) &&
+                                dt.isBefore(endOfDay);
                           }).toList();
 
-                          if (dayMemos.isEmpty) return Center(child: Text('이날 작성한 메모가 없습니다.', style: TextStyle(color: theme.textBody)));
+                          if (dayMemos.isEmpty)
+                            return Center(
+                              child: Text(
+                                '이날 작성한 메모가 없습니다.',
+                                style: TextStyle(color: theme.textBody),
+                              ),
+                            );
 
                           return ListView.builder(
                             physics: BouncingScrollPhysics(),
-                            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                            keyboardDismissBehavior:
+                                ScrollViewKeyboardDismissBehavior.onDrag,
                             itemCount: dayMemos.length,
                             itemBuilder: (context, index) {
                               final doc = dayMemos[index];
                               final String content = doc['content'] ?? '';
                               return Container(
                                 margin: EdgeInsets.only(bottom: 12.h),
-                                decoration: BoxDecoration(color: theme.bg, borderRadius: BorderRadius.circular(16.r), border: Border.all(color: theme.primaryLight.withOpacity(0.3))),
+                                decoration: BoxDecoration(
+                                  color: theme.bg,
+                                  borderRadius: BorderRadius.circular(16.r),
+                                  border: Border.all(
+                                    color: theme.primaryLight.withOpacity(0.3),
+                                  ),
+                                ),
                                 child: Material(
                                   color: Colors.transparent,
                                   child: InkWell(
@@ -267,14 +354,43 @@ class _CalendarPageState extends State<CalendarPage> {
                                     onTap: () async {
                                       Color fColor = theme.primary;
                                       try {
-                                        final fDoc = await FirebaseFirestore.instance.collection('users').doc(user!.uid).collection('folders').doc(doc['folderId']).get();
-                                        if (fDoc.exists) fColor = Color(fDoc['colorValue']);
+                                        final fDoc = await FirebaseFirestore
+                                            .instance
+                                            .collection('users')
+                                            .doc(user!.uid)
+                                            .collection('folders')
+                                            .doc(doc['folderId'])
+                                            .get();
+                                        if (fDoc.exists)
+                                          fColor = Color(fDoc['colorValue']);
                                       } catch (_) {}
                                       if (!mounted) return;
                                       Navigator.pop(sheetContext);
-                                      Navigator.push(context, MaterialPageRoute(builder: (context) => MemoEditScreen(memoId: doc.id, folderId: doc['folderId'], initialContent: content, folderColor: fColor)));
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => MemoEditScreen(
+                                            memoId: doc.id,
+                                            folderId: doc['folderId'],
+                                            initialContent: content,
+                                            folderColor: fColor,
+                                          ),
+                                        ),
+                                      );
                                     },
-                                    child: Padding(padding: EdgeInsets.all(16.w), child: Text(content, style: TextStyle(color: theme.textHeader, fontSize: 15.sp, height: 1.5), maxLines: 3, overflow: TextOverflow.ellipsis)),
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16.w),
+                                      child: Text(
+                                        content,
+                                        style: TextStyle(
+                                          color: theme.textHeader,
+                                          fontSize: 15.sp,
+                                          height: 1.5,
+                                        ),
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               );
@@ -302,17 +418,17 @@ class _CalendarPageState extends State<CalendarPage> {
       builder: (context, theme, child) {
         return Stack(
           children: [
-            RepaintBoundary(
-              child: Positioned(
-                top: -50,
-                left: -50,
+            Positioned(
+              top: -50,
+              left: -50,
+              child: RepaintBoundary(
                 child: GlowBackground(color: theme.accent1, size: 300),
               ),
             ),
-            RepaintBoundary(
-              child: Positioned(
-                bottom: -50,
-                right: -50,
+            Positioned(
+              bottom: -50,
+              right: -50,
+              child: RepaintBoundary(
                 child: GlowBackground(color: theme.primaryLight, size: 400),
               ),
             ),
@@ -396,15 +512,20 @@ class _CalendarPageState extends State<CalendarPage> {
                                 color: theme.primaryLight.withOpacity(0.3),
                               ),
                             ),
-                            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16.w,
+                              vertical: 20.h,
+                            ),
                             child: Column(
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     GestureDetector(
                                       onTap: () => setState(
-                                        () => _isPickerExpanded = !_isPickerExpanded,
+                                        () => _isPickerExpanded =
+                                            !_isPickerExpanded,
                                       ),
                                       child: Container(
                                         color: Colors.transparent,
@@ -421,7 +542,8 @@ class _CalendarPageState extends State<CalendarPage> {
                                             Icon(
                                               _isPickerExpanded
                                                   ? Icons.arrow_drop_up_rounded
-                                                  : Icons.arrow_drop_down_rounded,
+                                                  : Icons
+                                                        .arrow_drop_down_rounded,
                                               color: theme.textHeader,
                                               size: 32,
                                             ),
@@ -469,13 +591,14 @@ class _CalendarPageState extends State<CalendarPage> {
                                         initialDateTime: _focusedDay,
                                         minimumYear: 1900,
                                         maximumYear: 2080,
-                                        onDateTimeChanged: (newDate) => setState(
-                                          () => _focusedDay = DateTime(
-                                            newDate.year,
-                                            newDate.month,
-                                            1,
-                                          ),
-                                        ),
+                                        onDateTimeChanged: (newDate) =>
+                                            setState(
+                                              () => _focusedDay = DateTime(
+                                                newDate.year,
+                                                newDate.month,
+                                                1,
+                                              ),
+                                            ),
                                       ),
                                     ),
                                   )
@@ -488,65 +611,250 @@ class _CalendarPageState extends State<CalendarPage> {
                                         lastDay: DateTime.utc(2080, 12, 31),
                                         focusedDay: _focusedDay,
                                         rowHeight: 92.h,
-                                        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                                        onDaySelected: (selectedDay, focusedDay) {
-                                          setState(() {
-                                            _selectedDay = selectedDay;
-                                            _focusedDay = focusedDay;
-                                          });
-                                          _showUnifiedDaySheet(theme, selectedDay, allEvents);
-                                        },
-                                        onPageChanged: (focusedDay) => setState(() => _focusedDay = focusedDay),
+                                        selectedDayPredicate: (day) =>
+                                            isSameDay(_selectedDay, day),
+                                        onDaySelected:
+                                            (selectedDay, focusedDay) {
+                                              setState(() {
+                                                _selectedDay = selectedDay;
+                                                _focusedDay = focusedDay;
+                                              });
+                                              _showUnifiedDaySheet(
+                                                theme,
+                                                selectedDay,
+                                                allEvents,
+                                              );
+                                            },
+                                        onPageChanged: (focusedDay) => setState(
+                                          () => _focusedDay = focusedDay,
+                                        ),
                                         headerVisible: false,
                                         eventLoader: (day) {
                                           return allEvents.where((doc) {
-                                            if (doc.data() is Map<String, dynamic> &&
-                                                (doc.data() as Map<String, dynamic>).containsKey('startTime') &&
-                                                (doc.data() as Map<String, dynamic>).containsKey('endTime')) {
-                                              DateTime start = (doc['startTime'] as Timestamp).toDate();
-                                              DateTime end = (doc['endTime'] as Timestamp).toDate();
-                                              return _isDayInRange(day, start, end);
+                                            if (doc.data()
+                                                    is Map<String, dynamic> &&
+                                                (doc.data()
+                                                        as Map<String, dynamic>)
+                                                    .containsKey('startTime') &&
+                                                (doc.data()
+                                                        as Map<String, dynamic>)
+                                                    .containsKey('endTime')) {
+                                              DateTime start =
+                                                  (doc['startTime']
+                                                          as Timestamp)
+                                                      .toDate();
+                                              DateTime end =
+                                                  (doc['endTime'] as Timestamp)
+                                                      .toDate();
+                                              return _isDayInRange(
+                                                day,
+                                                start,
+                                                end,
+                                              );
                                             }
                                             return false;
                                           }).toList();
                                         },
                                         calendarBuilders: CalendarBuilders(
-                                          defaultBuilder: (context, day, focusedDay) {
-                                            Color textColor = (day.weekday == DateTime.sunday || day.weekday == DateTime.saturday) ? theme.accent2 : theme.textHeader;
-                                            return Align(alignment: Alignment.topCenter, child: Padding(padding: EdgeInsets.only(top: 6.h), child: Text('${day.day}', style: TextStyle(color: textColor, fontSize: 13.sp))));
-                                          },
-                                          outsideBuilder: (context, day, focusedDay) => Align(alignment: Alignment.topCenter, child: Padding(padding: EdgeInsets.only(top: 6.h), child: Text('${day.day}', style: TextStyle(color: theme.textBody.withOpacity(0.5), fontSize: 13.sp)))),
-                                          todayBuilder: (context, day, focusedDay) => Align(alignment: Alignment.topCenter, child: Container(margin: EdgeInsets.only(top: 6.h), width: 22.h, height: 22.h, decoration: BoxDecoration(color: theme.accent1.withOpacity(0.5), shape: BoxShape.circle), child: Center(child: Text('${day.day}', style: TextStyle(color: theme.textHeader, fontWeight: FontWeight.bold, fontSize: 12.sp))))),
-                                          selectedBuilder: (context, day, focusedDay) => Align(alignment: Alignment.topCenter, child: Container(margin: EdgeInsets.only(top: 6.h), width: 22.h, height: 22.h, decoration: BoxDecoration(gradient: LinearGradient(colors: [theme.primary, theme.primaryLight]), shape: BoxShape.circle), child: Center(child: Text('${day.day}', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12.sp))))),
+                                          defaultBuilder:
+                                              (context, day, focusedDay) {
+                                                Color textColor =
+                                                    (day.weekday ==
+                                                            DateTime.sunday ||
+                                                        day.weekday ==
+                                                            DateTime.saturday)
+                                                    ? theme.accent2
+                                                    : theme.textHeader;
+                                                return Align(
+                                                  alignment:
+                                                      Alignment.topCenter,
+                                                  child: Padding(
+                                                    padding: EdgeInsets.only(
+                                                      top: 6.h,
+                                                    ),
+                                                    child: Text(
+                                                      '${day.day}',
+                                                      style: TextStyle(
+                                                        color: textColor,
+                                                        fontSize: 13.sp,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                          outsideBuilder:
+                                              (context, day, focusedDay) =>
+                                                  Align(
+                                                    alignment:
+                                                        Alignment.topCenter,
+                                                    child: Padding(
+                                                      padding: EdgeInsets.only(
+                                                        top: 6.h,
+                                                      ),
+                                                      child: Text(
+                                                        '${day.day}',
+                                                        style: TextStyle(
+                                                          color: theme.textBody
+                                                              .withOpacity(0.5),
+                                                          fontSize: 13.sp,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                          todayBuilder:
+                                              (
+                                                context,
+                                                day,
+                                                focusedDay,
+                                              ) => Align(
+                                                alignment: Alignment.topCenter,
+                                                child: Container(
+                                                  margin: EdgeInsets.only(
+                                                    top: 6.h,
+                                                  ),
+                                                  width: 22.h,
+                                                  height: 22.h,
+                                                  decoration: BoxDecoration(
+                                                    color: theme.accent1
+                                                        .withOpacity(0.5),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: Center(
+                                                    child: Text(
+                                                      '${day.day}',
+                                                      style: TextStyle(
+                                                        color: theme.textHeader,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 12.sp,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                          selectedBuilder:
+                                              (
+                                                context,
+                                                day,
+                                                focusedDay,
+                                              ) => Align(
+                                                alignment: Alignment.topCenter,
+                                                child: Container(
+                                                  margin: EdgeInsets.only(
+                                                    top: 6.h,
+                                                  ),
+                                                  width: 22.h,
+                                                  height: 22.h,
+                                                  decoration: BoxDecoration(
+                                                    gradient: LinearGradient(
+                                                      colors: [
+                                                        theme.primary,
+                                                        theme.primaryLight,
+                                                      ],
+                                                    ),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: Center(
+                                                    child: Text(
+                                                      '${day.day}',
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 12.sp,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
                                           markerBuilder: (context, day, events) {
-                                            if (events.isEmpty) return SizedBox();
-                                            final filteredEvents = events.cast<QueryDocumentSnapshot>().where((doc) {
-                                              return (eventTracks[doc.id] ?? 99) < 4;
-                                            }).toList();
+                                            if (events.isEmpty)
+                                              return SizedBox();
+                                            final filteredEvents = events
+                                                .cast<QueryDocumentSnapshot>()
+                                                .where((doc) {
+                                                  return (eventTracks[doc.id] ??
+                                                          99) <
+                                                      4;
+                                                })
+                                                .toList();
                                             return Positioned.fill(
                                               child: Stack(
                                                 clipBehavior: Clip.none,
-                                                children: filteredEvents.map((doc) {
-                                                  final data = doc.data() as Map<String, dynamic>;
-                                                  final title = data['title'] ?? '';
-                                                  final start = (data['startTime'] as Timestamp).toDate();
-                                                  final end = (data['endTime'] as Timestamp).toDate();
-                                                  DateTime startOnly = DateTime(start.year, start.month, start.day);
-                                                  DateTime endOnly = DateTime(end.year, end.month, end.day);
-                                                  bool isStartDay = isSameDay(day, startOnly);
-                                                  bool isEndDay = isSameDay(day, endOnly);
-                                                  int span = endOnly.difference(startOnly).inDays + 1;
-                                                  DateTime midDay = startOnly.add(Duration(days: span ~/ 2));
-                                                  bool isMidDay = isSameDay(day, midDay);
-                                                  bool showText = isMidDay || (span == 1);
+                                                children: filteredEvents.map((
+                                                  doc,
+                                                ) {
+                                                  final data =
+                                                      doc.data()
+                                                          as Map<
+                                                            String,
+                                                            dynamic
+                                                          >;
+                                                  final title =
+                                                      data['title'] ?? '';
+                                                  final start =
+                                                      (data['startTime']
+                                                              as Timestamp)
+                                                          .toDate();
+                                                  final end =
+                                                      (data['endTime']
+                                                              as Timestamp)
+                                                          .toDate();
+                                                  DateTime startOnly = DateTime(
+                                                    start.year,
+                                                    start.month,
+                                                    start.day,
+                                                  );
+                                                  DateTime endOnly = DateTime(
+                                                    end.year,
+                                                    end.month,
+                                                    end.day,
+                                                  );
+                                                  bool isStartDay = isSameDay(
+                                                    day,
+                                                    startOnly,
+                                                  );
+                                                  bool isEndDay = isSameDay(
+                                                    day,
+                                                    endOnly,
+                                                  );
+                                                  int span =
+                                                      endOnly
+                                                          .difference(startOnly)
+                                                          .inDays +
+                                                      1;
+                                                  DateTime midDay = startOnly
+                                                      .add(
+                                                        Duration(
+                                                          days: span ~/ 2,
+                                                        ),
+                                                      );
+                                                  bool isMidDay = isSameDay(
+                                                    day,
+                                                    midDay,
+                                                  );
+                                                  bool showText =
+                                                      isMidDay || (span == 1);
                                                   Color baseColor;
-                                                  if (data.containsKey('colorValue')) {
-                                                    baseColor = Color(data['colorValue']);
+                                                  if (data.containsKey(
+                                                    'colorValue',
+                                                  )) {
+                                                    baseColor = Color(
+                                                      data['colorValue'],
+                                                    );
                                                   } else {
-                                                    final colors = [theme.primary, theme.accent1, theme.accent2];
-                                                    baseColor = colors[doc.id.hashCode.abs() % colors.length];
+                                                    final colors = [
+                                                      theme.primary,
+                                                      theme.accent1,
+                                                      theme.accent2,
+                                                    ];
+                                                    baseColor =
+                                                        colors[doc.id.hashCode
+                                                                .abs() %
+                                                            colors.length];
                                                   }
-                                                  int track = eventTracks[doc.id] ?? 0;
+                                                  int track =
+                                                      eventTracks[doc.id] ?? 0;
                                                   return Positioned(
                                                     top: 32.h + (track * 15.h),
                                                     left: isStartDay ? 2 : 0,
@@ -554,23 +862,54 @@ class _CalendarPageState extends State<CalendarPage> {
                                                     height: 13.h,
                                                     child: Container(
                                                       decoration: BoxDecoration(
-                                                        color: baseColor.withOpacity(theme.name.contains('다크') ? 0.3 : 0.15),
-                                                        borderRadius: BorderRadius.horizontal(
-                                                          left: isStartDay ? Radius.circular(4) : Radius.zero,
-                                                          right: isEndDay ? Radius.circular(4) : Radius.zero,
-                                                        ),
+                                                        color: baseColor
+                                                            .withOpacity(
+                                                              theme.name
+                                                                      .contains(
+                                                                        '다크',
+                                                                      )
+                                                                  ? 0.3
+                                                                  : 0.15,
+                                                            ),
+                                                        borderRadius:
+                                                            BorderRadius.horizontal(
+                                                              left: isStartDay
+                                                                  ? Radius.circular(
+                                                                      4,
+                                                                    )
+                                                                  : Radius.zero,
+                                                              right: isEndDay
+                                                                  ? Radius.circular(
+                                                                      4,
+                                                                    )
+                                                                  : Radius.zero,
+                                                            ),
                                                       ),
-                                                      alignment: Alignment.center,
+                                                      alignment:
+                                                          Alignment.center,
                                                       child: showText
                                                           ? Text(
                                                               title,
                                                               style: TextStyle(
                                                                 fontSize: 8.sp,
-                                                                fontWeight: FontWeight.w600,
-                                                                color: theme.name.contains('다크') ? baseColor.withOpacity(0.9) : baseColor,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                color:
+                                                                    theme.name
+                                                                        .contains(
+                                                                          '다크',
+                                                                        )
+                                                                    ? baseColor
+                                                                          .withOpacity(
+                                                                            0.9,
+                                                                          )
+                                                                    : baseColor,
                                                               ),
                                                               maxLines: 1,
-                                                              overflow: TextOverflow.clip,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .clip,
                                                             )
                                                           : SizedBox.shrink(),
                                                     ),
@@ -582,24 +921,44 @@ class _CalendarPageState extends State<CalendarPage> {
                                         ),
                                         calendarStyle: CalendarStyle(
                                           todayDecoration: BoxDecoration(
-                                            color: theme.accent1.withOpacity(0.5),
+                                            color: theme.accent1.withOpacity(
+                                              0.5,
+                                            ),
                                             shape: BoxShape.circle,
-                                            border: Border.all(color: theme.accent1, width: 2),
+                                            border: Border.all(
+                                              color: theme.accent1,
+                                              width: 2,
+                                            ),
                                           ),
-                                          todayTextStyle: TextStyle(color: theme.textHeader, fontWeight: FontWeight.bold),
+                                          todayTextStyle: TextStyle(
+                                            color: theme.textHeader,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                           selectedDecoration: BoxDecoration(
-                                            gradient: LinearGradient(colors: [theme.primary, theme.primaryLight]),
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                theme.primary,
+                                                theme.primaryLight,
+                                              ],
+                                            ),
                                             shape: BoxShape.circle,
                                             boxShadow: [
                                               BoxShadow(
-                                                color: theme.primary.withOpacity(0.4),
+                                                color: theme.primary
+                                                    .withOpacity(0.4),
                                                 blurRadius: 10,
                                                 offset: Offset(0, 4),
                                               ),
                                             ],
                                           ),
-                                          defaultTextStyle: TextStyle(color: theme.textHeader, fontWeight: FontWeight.w500),
-                                          weekendTextStyle: TextStyle(color: theme.accent2, fontWeight: FontWeight.w500),
+                                          defaultTextStyle: TextStyle(
+                                            color: theme.textHeader,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          weekendTextStyle: TextStyle(
+                                            color: theme.accent2,
+                                            fontWeight: FontWeight.w500,
+                                          ),
                                           outsideDaysVisible: false,
                                         ),
                                       ),
